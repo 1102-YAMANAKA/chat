@@ -15,20 +15,56 @@
       input, button { padding: 10px; font-size: 14px; }
       #name { width: 150px; }
       #input { flex: 1; }
+      #chat-container { display: none; } /* 初期は非表示 */
+      #locked {
+        text-align: center; margin-top: 150px; color: #444; font-size: 18px;
+      }
     </style>
   </head>
   <body>
     <h2>K-Chat</h2>
-    <ul id="messages"></ul>
 
-    <form id="form">
-      <input id="name" placeholder="名前を入力..." autocomplete="off" />
-      <input id="input" placeholder="メッセージを入力..." autocomplete="off" />
-      <button>送信</button>
-    </form>
+    <!-- あいことば入力画面 -->
+    <div id="locked">
+      🔒 このチャットルームは「あいことば」で保護されています。
+      <br><br>
+      <input id="passInput" type="password" placeholder="あいことばを入力..." />
+      <button onclick="checkPassword()">入室</button>
+      <p id="error" style="color:red;"></p>
+    </div>
+
+    <!-- チャット本体 -->
+    <div id="chat-container">
+      <ul id="messages"></ul>
+      <form id="form">
+        <input id="name" placeholder="名前を入力..." autocomplete="off" />
+        <input id="input" placeholder="メッセージを入力..." autocomplete="off" />
+        <button>送信</button>
+      </form>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+      // ========================
+      // 🔐 あいことば設定
+      // ========================
+      const PASSWORD = "200"; // ←ここで変更可能
+
+      function checkPassword() {
+        const input = document.getElementById("passInput").value;
+        const error = document.getElementById("error");
+
+        if (input === PASSWORD) {
+          document.getElementById("locked").style.display = "none";
+          document.getElementById("chat-container").style.display = "block";
+        } else {
+          error.textContent = "⚠️ あいことばが違います。";
+        }
+      }
+
+      // ========================
+      // 💬 チャット機能
+      // ========================
       const socket = io();
       const form = document.getElementById("form");
       const input = document.getElementById("input");
@@ -41,7 +77,6 @@
         return now.toISOString().replace("T", " ").substring(0, 19);
       }
 
-      // 送信イベント
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         const name = nameInput.value.trim();
@@ -54,13 +89,11 @@
         input.value = "";
       });
 
-      // 過去ログ受信
       socket.on("chat history", (messagesList) => {
         messages.innerHTML = "";
         messagesList.forEach(m => appendMessage(m));
       });
 
-      // 新メッセージ受信
       socket.on("chat message", (m) => appendMessage(m));
 
       function appendMessage(m) {
