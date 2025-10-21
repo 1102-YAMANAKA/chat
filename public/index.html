@@ -2,36 +2,82 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>💬 パブリックチャット</title>
+    <title>K-Chat</title>
     <style>
-      body { font-family: sans-serif; background: #fafafa; }
-      #messages { list-style: none; padding: 0; height: 70vh; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; }
-      li { padding: 5px 10px; border-bottom: 1px solid #eee; }
-      form { display: flex; }
-      input { flex: 1; padding: 10px; }
-      button { padding: 10px; }
+      body { 
+        font-family: sans-serif; 
+        background: #fafafa; 
+        margin: 20px; 
+      }
+      h2 { color: #333; margin-bottom: 10px; }
+      #messages { 
+        list-style: none; 
+        padding: 0; 
+        height: 70vh; 
+        overflow-y: scroll; 
+        border: 1px solid #ddd; 
+        margin-bottom: 10px;
+        background: white;
+      }
+      li { 
+        padding: 5px 10px; 
+        border-bottom: 1px solid #eee; 
+        font-size: 14px;
+      }
+      form { display: flex; gap: 5px; }
+      input, button { padding: 10px; font-size: 14px; }
+      #name { width: 150px; }
+      #input { flex: 1; }
+      .timestamp { color: #888; font-size: 12px; margin-left: 5px; }
     </style>
   </head>
   <body>
-    <h2>💬 パブリックチャット</h2>
+    <h2>K-Chat</h2>
     <ul id="messages"></ul>
+
     <form id="form">
+      <input id="name" placeholder="名前を入力..." autocomplete="off" />
       <input id="input" placeholder="メッセージを入力..." autocomplete="off" />
       <button>送信</button>
     </form>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
       const socket = io();
       const form = document.getElementById("form");
       const input = document.getElementById("input");
+      const nameInput = document.getElementById("name");
       const messages = document.getElementById("messages");
+
+      // 日時を日本時間で取得する関数
+      function getJSTDateTime() {
+        const now = new Date();
+        const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JST (+9時間)
+        const y = jst.getUTCFullYear();
+        const m = String(jst.getUTCMonth() + 1).padStart(2, "0");
+        const d = String(jst.getUTCDate()).padStart(2, "0");
+        const hh = String(jst.getUTCHours()).padStart(2, "0");
+        const mm = String(jst.getUTCMinutes()).padStart(2, "0");
+        const ss = String(jst.getUTCSeconds()).padStart(2, "0");
+        return `[${y}/${m}/${d} ${hh}:${mm}:${ss}]`;
+      }
 
       form.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (input.value) {
-          socket.emit("chat message", input.value);
-          input.value = "";
+
+        const name = nameInput.value.trim();
+        const msg = input.value.trim();
+
+        if (!name) {
+          alert("⚠️ 名前を入力してください。");
+          nameInput.focus();
+          return;
         }
+        if (!msg) return;
+
+        const timestamp = getJSTDateTime();
+        socket.emit("chat message", `${timestamp} ${name}: ${msg}`);
+        input.value = "";
       });
 
       socket.on("chat message", (msg) => {
