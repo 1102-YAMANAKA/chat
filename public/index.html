@@ -4,27 +4,55 @@
     <meta charset="utf-8" />
     <title>K-Chat</title>
     <style>
-      body { font-family: sans-serif; background: #fafafa; margin: 20px; }
-      h2 { color: #333; margin-bottom: 10px; }
-      #messages {
-        list-style: none; padding: 0; height: 70vh;
-        overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; background: white;
+      body {
+        font-family: sans-serif;
+        background: #fafafa;
+        margin: 20px;
       }
-      li { 
-        padding: 5px 10px; 
-        border-bottom: 1px solid #eee; 
-        font-size: 14px; 
-        display: flex; 
-        justify-content: space-between; 
+      h2 {
+        color: #333;
+        margin-bottom: 10px;
+      }
+      #messages {
+        list-style: none;
+        padding: 0;
+        height: 70vh;
+        overflow-y: scroll;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+        background: white;
+      }
+      li {
+        padding: 5px 10px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
         align-items: center;
       }
-      form { display: flex; gap: 5px; }
-      input, button { padding: 10px; font-size: 14px; }
-      #name { width: 150px; }
-      #input { flex: 1; }
-      #chat-container { display: none; }
+      form {
+        display: flex;
+        gap: 5px;
+      }
+      input,
+      button {
+        padding: 10px;
+        font-size: 14px;
+      }
+      #name {
+        width: 150px;
+      }
+      #input {
+        flex: 1;
+      }
+      #chat-container {
+        display: none;
+      }
       #locked {
-        text-align: center; margin-top: 150px; color: #444; font-size: 18px;
+        text-align: center;
+        margin-top: 150px;
+        color: #444;
+        font-size: 18px;
       }
       .delete-btn {
         background-color: #ff4d4d;
@@ -42,16 +70,20 @@
   <body>
     <h2>K-Chat</h2>
 
-    <!-- あいことば入力画面 -->
+    <!-- 🔒 あいことば入力画面 -->
     <div id="locked">
       🔒 このチャットルームは「あいことば」で保護されています。
-      <br><br>
-      <input id="passInput" type="password" placeholder="あいことばを入力..." />
+      <br /><br />
+      <input
+        id="passInput"
+        type="password"
+        placeholder="あいことばを入力..."
+      />
       <button onclick="checkPassword()">入室</button>
-      <p id="error" style="color:red;"></p>
+      <p id="error" style="color: red"></p>
     </div>
 
-    <!-- チャット本体 -->
+    <!-- 💬 チャット本体 -->
     <div id="chat-container">
       <ul id="messages"></ul>
       <form id="form">
@@ -66,47 +98,55 @@
       // ========================
       // 🔐 あいことば設定（2種類）
       // ========================
-      const USER_PASSWORD = "200";   // 一般ユーザー用
-      const ADMIN_PASSWORD = "890";  // 管理者用
-      let isAdmin = false;           // 管理者判定フラグ
+      const USER_PASSWORD = "200"; // 一般ユーザー用
+      const ADMIN_PASSWORD = "890"; // 管理者用
+      let isAdmin = false; // 管理者判定フラグ
 
-      function checkPassword() {
-        const input = document.getElementById("passInput").value;
-        const error = document.getElementById("error");
-
-        if (input === USER_PASSWORD) {
-          isAdmin = false;
-          document.getElementById("locked").style.display = "none";
-          document.getElementById("chat-container").style.display = "block";
-        } else if (input === ADMIN_PASSWORD) {
-          isAdmin = true;
-          document.getElementById("locked").style.display = "none";
-          document.getElementById("chat-container").style.display = "block";
-        } else {
-          error.textContent = "⚠️ あいことばが違います。";
-        }
-      }
-
-      // ========================
-      // 💬 チャット機能
-      // ========================
       const socket = io();
       const form = document.getElementById("form");
       const input = document.getElementById("input");
       const nameInput = document.getElementById("name");
       const messages = document.getElementById("messages");
 
+      // ====== あいことば確認 ======
+      function checkPassword() {
+        const inputVal = document.getElementById("passInput").value.trim();
+        const error = document.getElementById("error");
+
+        if (inputVal === USER_PASSWORD) {
+          isAdmin = false;
+          unlockChat();
+        } else if (inputVal === ADMIN_PASSWORD) {
+          isAdmin = true;
+          unlockChat();
+        } else {
+          error.textContent = "⚠️ あいことばが違います。";
+        }
+      }
+
+      // ====== チャット画面表示 ======
+      function unlockChat() {
+        document.getElementById("locked").style.display = "none";
+        document.getElementById("chat-container").style.display = "block";
+        socket.emit("request history"); // 入室時に履歴要求
+      }
+
+      // ====== JST時間 ======
       function getJSTDateTime() {
         const now = new Date();
         now.setHours(now.getHours() + 9);
         return now.toISOString().replace("T", " ").substring(0, 19);
       }
 
+      // ====== 送信処理 ======
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         const name = nameInput.value.trim();
         const text = input.value.trim();
-        if (!name) { alert("⚠️ 名前を入力してください"); return; }
+        if (!name) {
+          alert("⚠️ 名前を入力してください");
+          return;
+        }
         if (!text) return;
 
         const msgObj = { name, text, timestamp: getJSTDateTime() };
@@ -114,39 +154,39 @@
         input.value = "";
       });
 
-      // --- 過去メッセージを表示 ---
+      // ====== 履歴表示 ======
       socket.on("chat history", (messagesList) => {
         messages.innerHTML = "";
-        messagesList.forEach(m => appendMessage(m));
+        messagesList.forEach((m) => appendMessage(m));
       });
 
-      // --- 新メッセージを受信 ---
+      // ====== 新規メッセージ ======
       socket.on("chat message", (m) => appendMessage(m));
 
-      // --- 削除イベント受信（全員の画面から消す） ---
+      // ====== 削除反映 ======
       socket.on("remove message", (id) => {
         const li = document.getElementById(id);
         if (li) li.remove();
       });
 
-      // --- メッセージ表示処理 ---
+      // ====== メッセージ表示 ======
       function appendMessage(m) {
         const li = document.createElement("li");
         li.id = m._id;
+
+        const content = `[${m.timestamp}] ${m.name}: ${m.text}`;
         li.innerHTML = `
-          <span>[${m.timestamp}] ${m.name}: ${m.text}</span>
+          <span>${content}</span>
           ${isAdmin ? `<button class="delete-btn" onclick="deleteMessage('${m._id}')">❌</button>` : ""}
         `;
         messages.appendChild(li);
         messages.scrollTop = messages.scrollHeight;
       }
 
-      // --- 削除ボタン押下処理 ---
+      // ====== 削除ボタン押下 ======
       function deleteMessage(id) {
         const confirmDel = confirm("このメッセージを削除しますか？");
-        if (confirmDel) {
-          socket.emit("delete message", id);
-        }
+        if (confirmDel) socket.emit("delete message", id);
       }
     </script>
   </body>
