@@ -4,31 +4,17 @@
     <meta charset="utf-8" />
     <title>K-Chat</title>
     <style>
-      body { 
-        font-family: sans-serif; 
-        background: #fafafa; 
-        margin: 20px; 
-      }
+      body { font-family: sans-serif; background: #fafafa; margin: 20px; }
       h2 { color: #333; margin-bottom: 10px; }
-      #messages { 
-        list-style: none; 
-        padding: 0; 
-        height: 70vh; 
-        overflow-y: scroll; 
-        border: 1px solid #ddd; 
-        margin-bottom: 10px;
-        background: white;
+      #messages {
+        list-style: none; padding: 0; height: 70vh;
+        overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; background: white;
       }
-      li { 
-        padding: 5px 10px; 
-        border-bottom: 1px solid #eee; 
-        font-size: 14px;
-      }
+      li { padding: 5px 10px; border-bottom: 1px solid #eee; font-size: 14px; }
       form { display: flex; gap: 5px; }
       input, button { padding: 10px; font-size: 14px; }
       #name { width: 150px; }
       #input { flex: 1; }
-      .timestamp { color: #888; font-size: 12px; margin-left: 5px; }
     </style>
   </head>
   <body>
@@ -49,43 +35,40 @@
       const nameInput = document.getElementById("name");
       const messages = document.getElementById("messages");
 
-      // 日時を日本時間で取得する関数
       function getJSTDateTime() {
         const now = new Date();
-        const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000); // JST (+9時間)
-        const y = jst.getUTCFullYear();
-        const m = String(jst.getUTCMonth() + 1).padStart(2, "0");
-        const d = String(jst.getUTCDate()).padStart(2, "0");
-        const hh = String(jst.getUTCHours()).padStart(2, "0");
-        const mm = String(jst.getUTCMinutes()).padStart(2, "0");
-        const ss = String(jst.getUTCSeconds()).padStart(2, "0");
-        return `[${y}/${m}/${d} ${hh}:${mm}:${ss}]`;
+        now.setHours(now.getHours() + 9);
+        return now.toISOString().replace("T", " ").substring(0, 19);
       }
 
+      // 送信イベント
       form.addEventListener("submit", (e) => {
         e.preventDefault();
-
         const name = nameInput.value.trim();
-        const msg = input.value.trim();
+        const text = input.value.trim();
+        if (!name) { alert("⚠️ 名前を入力してください"); return; }
+        if (!text) return;
 
-        if (!name) {
-          alert("⚠️ 名前を入力してください。");
-          nameInput.focus();
-          return;
-        }
-        if (!msg) return;
-
-        const timestamp = getJSTDateTime();
-        socket.emit("chat message", `${timestamp} ${name}: ${msg}`);
+        const msgObj = { name, text, timestamp: getJSTDateTime() };
+        socket.emit("chat message", msgObj);
         input.value = "";
       });
 
-      socket.on("chat message", (msg) => {
+      // 過去ログ受信
+      socket.on("chat history", (messagesList) => {
+        messages.innerHTML = "";
+        messagesList.forEach(m => appendMessage(m));
+      });
+
+      // 新メッセージ受信
+      socket.on("chat message", (m) => appendMessage(m));
+
+      function appendMessage(m) {
         const li = document.createElement("li");
-        li.textContent = msg;
+        li.textContent = `[${m.timestamp}] ${m.name}: ${m.text}`;
         messages.appendChild(li);
         messages.scrollTop = messages.scrollHeight;
-      });
+      }
     </script>
   </body>
 </html>
