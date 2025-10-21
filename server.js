@@ -42,6 +42,13 @@ io.on("connection", async (socket) => {
     io.emit("chat message", msgObj);
   });
 
+    // メッセージ削除イベント（誰でも削除可能）
+    socket.on("delete message", async (id) => {
+    await Message.findByIdAndDelete(id);
+    io.emit("remove message", id);
+    console.log(`🗑 メッセージ削除: ${id}`);
+  });
+
   socket.on("disconnect", () => {
     console.log("🔴 ユーザー切断");
   });
