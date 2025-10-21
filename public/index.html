@@ -10,33 +10,21 @@
         list-style: none; padding: 0; height: 70vh;
         overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; background: white;
       }
-      li { 
-        padding: 5px 10px; 
-        border-bottom: 1px solid #eee; 
-        font-size: 14px; 
-        display: flex; 
-        justify-content: space-between; 
-        align-items: center;
-      }
+      li { padding: 5px 10px; border-bottom: 1px solid #eee; font-size: 14px; }
       form { display: flex; gap: 5px; }
       input, button { padding: 10px; font-size: 14px; }
       #name { width: 150px; }
       #input { flex: 1; }
-      .delBtn { 
-        background: none; 
-        border: none; 
-        color: red; 
-        font-weight: bold; 
-        cursor: pointer; 
+      #chat-container { display: none; } /* 初期は非表示 */
+      #locked {
+        text-align: center; margin-top: 150px; color: #444; font-size: 18px;
       }
-      #chat-container { display: none; }
-      #locked { text-align: center; margin-top: 150px; color: #444; font-size: 18px; }
     </style>
   </head>
   <body>
     <h2>K-Chat</h2>
 
-    <!-- あいことば -->
+    <!-- あいことば入力画面 -->
     <div id="locked">
       🔒 このチャットルームは「あいことば」で保護されています。
       <br><br>
@@ -57,33 +45,38 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-      const PASSWORD = "200";
+      // ========================
+      // 🔐 あいことば設定
+      // ========================
+      const PASSWORD = "kchat2025"; // ←ここで変更可能
+
+      function checkPassword() {
+        const input = document.getElementById("passInput").value;
+        const error = document.getElementById("error");
+
+        if (input === PASSWORD) {
+          document.getElementById("locked").style.display = "none";
+          document.getElementById("chat-container").style.display = "block";
+        } else {
+          error.textContent = "⚠️ あいことばが違います。";
+        }
+      }
+
+      // ========================
+      // 💬 チャット機能
+      // ========================
       const socket = io();
       const form = document.getElementById("form");
       const input = document.getElementById("input");
       const nameInput = document.getElementById("name");
       const messages = document.getElementById("messages");
 
-      // あいことば確認
-      function checkPassword() {
-        const val = document.getElementById("passInput").value;
-        const err = document.getElementById("error");
-        if (val === PASSWORD) {
-          document.getElementById("locked").style.display = "none";
-          document.getElementById("chat-container").style.display = "block";
-        } else {
-          err.textContent = "⚠️ あいことばが違います。";
-        }
-      }
-
-      // 日本時間
       function getJSTDateTime() {
         const now = new Date();
         now.setHours(now.getHours() + 9);
         return now.toISOString().replace("T", " ").substring(0, 19);
       }
 
-      // 送信処理
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         const name = nameInput.value.trim();
@@ -96,37 +89,18 @@
         input.value = "";
       });
 
-      // 表示用関数
-      function appendMessage(m) {
-        const li = document.createElement("li");
-        li.id = m._id;
-        li.innerHTML = `
-          <span>[${m.timestamp}] ${m.name}: ${m.text}</span>
-          ${m.name === nameInput.value.trim() ? '<button class="delBtn" onclick="deleteMessage(\'' + m._id + '\')">❌</button>' : ""}
-        `;
-        messages.appendChild(li);
-        messages.scrollTop = messages.scrollHeight;
-      }
-
-      // 過去ログ受信
-      socket.on("chat history", (list) => {
+      socket.on("chat history", (messagesList) => {
         messages.innerHTML = "";
-        list.forEach(m => appendMessage(m));
+        messagesList.forEach(m => appendMessage(m));
       });
 
-      // 新メッセージ受信
       socket.on("chat message", (m) => appendMessage(m));
 
-      // 削除受信
-      socket.on("remove message", (id) => {
-        const li = document.getElementById(id);
-        if (li) li.remove();
-      });
-
-      // 削除ボタン押下時
-      function deleteMessage(id) {
-        const confirmDel = confirm("このメッセージを削除しますか？");
-        if (confirmDel) socket.emit("delete message", id);
+      function appendMessage(m) {
+        const li = document.createElement("li");
+        li.textContent = `[${m.timestamp}] ${m.name}: ${m.text}`;
+        messages.appendChild(li);
+        messages.scrollTop = messages.scrollHeight;
       }
     </script>
   </body>
