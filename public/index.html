@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>💬 パブリックチャット</title>
+    <style>
+      body { font-family: sans-serif; background: #fafafa; }
+      #messages { list-style: none; padding: 0; height: 70vh; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; }
+      li { padding: 5px 10px; border-bottom: 1px solid #eee; }
+      form { display: flex; }
+      input { flex: 1; padding: 10px; }
+      button { padding: 10px; }
+    </style>
+  </head>
+  <body>
+    <h2>💬 パブリックチャット</h2>
+    <ul id="messages"></ul>
+    <form id="form">
+      <input id="input" placeholder="メッセージを入力..." autocomplete="off" />
+      <button>送信</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const form = document.getElementById("form");
+      const input = document.getElementById("input");
+      const messages = document.getElementById("messages");
+
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        if (input.value) {
+          socket.emit("chat message", input.value);
+          input.value = "";
+        }
+      });
+
+      socket.on("chat message", (msg) => {
+        const li = document.createElement("li");
+        li.textContent = msg;
+        messages.appendChild(li);
+        messages.scrollTop = messages.scrollHeight;
+      });
+    </script>
+  </body>
+</html>
