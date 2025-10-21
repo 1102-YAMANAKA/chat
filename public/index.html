@@ -10,14 +10,32 @@
         list-style: none; padding: 0; height: 70vh;
         overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; background: white;
       }
-      li { padding: 5px 10px; border-bottom: 1px solid #eee; font-size: 14px; }
+      li { 
+        padding: 5px 10px; 
+        border-bottom: 1px solid #eee; 
+        font-size: 14px; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+      }
       form { display: flex; gap: 5px; }
       input, button { padding: 10px; font-size: 14px; }
       #name { width: 150px; }
       #input { flex: 1; }
-      #chat-container { display: none; } /* 初期は非表示 */
+      #chat-container { display: none; }
       #locked {
         text-align: center; margin-top: 150px; color: #444; font-size: 18px;
+      }
+      .delete-btn {
+        background-color: #ff4d4d;
+        border: none;
+        color: white;
+        border-radius: 4px;
+        padding: 2px 6px;
+        cursor: pointer;
+      }
+      .delete-btn:hover {
+        background-color: #d22;
       }
     </style>
   </head>
@@ -89,18 +107,39 @@
         input.value = "";
       });
 
+      // --- 過去メッセージを表示 ---
       socket.on("chat history", (messagesList) => {
         messages.innerHTML = "";
         messagesList.forEach(m => appendMessage(m));
       });
 
+      // --- 新メッセージを受信 ---
       socket.on("chat message", (m) => appendMessage(m));
 
+      // --- 削除イベント受信（全員の画面から消す） ---
+      socket.on("remove message", (id) => {
+        const li = document.getElementById(id);
+        if (li) li.remove();
+      });
+
+      // --- メッセージ表示処理 ---
       function appendMessage(m) {
         const li = document.createElement("li");
-        li.textContent = `[${m.timestamp}] ${m.name}: ${m.text}`;
+        li.id = m._id;
+        li.innerHTML = `
+          <span>[${m.timestamp}] ${m.name}: ${m.text}</span>
+          <button class="delete-btn" onclick="deleteMessage('${m._id}')">❌</button>
+        `;
         messages.appendChild(li);
         messages.scrollTop = messages.scrollHeight;
+      }
+
+      // --- 削除ボタン押下処理 ---
+      function deleteMessage(id) {
+        const confirmDel = confirm("このメッセージを削除しますか？");
+        if (confirmDel) {
+          socket.emit("delete message", id);
+        }
       }
     </script>
   </body>
