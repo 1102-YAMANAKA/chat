@@ -100,7 +100,7 @@
       // ========================
       const USER_PASSWORD = "200"; // 一般ユーザー用
       const ADMIN_PASSWORD = "890"; // 管理者用
-      let isAdmin = false; // 管理者判定フラグ
+      let isAdmin = false;
 
       const socket = io();
       const form = document.getElementById("form");
@@ -128,7 +128,15 @@
       function unlockChat() {
         document.getElementById("locked").style.display = "none";
         document.getElementById("chat-container").style.display = "block";
-        socket.emit("request history"); // 入室時に履歴要求
+
+        // 管理者かどうかをコンソールに表示（デバッグ確認）
+        console.log("isAdmin =", isAdmin);
+
+        // 管理者フラグを送信（サーバー側が反応するように）
+        socket.emit("join", { admin: isAdmin });
+
+        // 過去メッセージ取得を遅延実行（描画反映待ち）
+        setTimeout(() => socket.emit("request history"), 200);
       }
 
       // ====== JST時間 ======
@@ -172,12 +180,12 @@
       // ====== メッセージ表示 ======
       function appendMessage(m) {
         const li = document.createElement("li");
-        li.id = m._id;
+        li.id = m._id || Math.random().toString(36).substr(2, 9); // 一時ID保険
 
         const content = `[${m.timestamp}] ${m.name}: ${m.text}`;
         li.innerHTML = `
           <span>${content}</span>
-          ${isAdmin ? `<button class="delete-btn" onclick="deleteMessage('${m._id}')">❌</button>` : ""}
+          ${isAdmin ? `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>` : ""}
         `;
         messages.appendChild(li);
         messages.scrollTop = messages.scrollHeight;
