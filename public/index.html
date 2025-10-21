@@ -64,15 +64,22 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
       // ========================
-      // 🔐 あいことば設定
+      // 🔐 あいことば設定（2種類）
       // ========================
-      const PASSWORD = "200"; // ←ここで変更可能
+      const USER_PASSWORD = "200";   // 一般ユーザー用
+      const ADMIN_PASSWORD = "890";  // 管理者用
+      let isAdmin = false;           // 管理者判定フラグ
 
       function checkPassword() {
         const input = document.getElementById("passInput").value;
         const error = document.getElementById("error");
 
-        if (input === PASSWORD) {
+        if (input === USER_PASSWORD) {
+          isAdmin = false;
+          document.getElementById("locked").style.display = "none";
+          document.getElementById("chat-container").style.display = "block";
+        } else if (input === ADMIN_PASSWORD) {
+          isAdmin = true;
           document.getElementById("locked").style.display = "none";
           document.getElementById("chat-container").style.display = "block";
         } else {
@@ -128,7 +135,7 @@
         li.id = m._id;
         li.innerHTML = `
           <span>[${m.timestamp}] ${m.name}: ${m.text}</span>
-          <button class="delete-btn" onclick="deleteMessage('${m._id}')">❌</button>
+          ${isAdmin ? `<button class="delete-btn" onclick="deleteMessage('${m._id}')">❌</button>` : ""}
         `;
         messages.appendChild(li);
         messages.scrollTop = messages.scrollHeight;
