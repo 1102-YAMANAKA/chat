@@ -28,25 +28,40 @@ const Message = mongoose.model("Message", messageSchema);
 io.on("connection", async (socket) => {
   console.log("🟢 ユーザー接続");
 
-  // 接続時に過去メッセージを送信
+  // 接続時に過去メッセージ送信
   const pastMessages = await Message.find().sort({ _id: 1 }).limit(100);
   socket.emit("chat history", pastMessages);
 
-  // 新しいメッセージ受信
-  socket.on("chat message", async (msgObj) => {
-    // MongoDBに保存
-    const newMsg = new Message(msgObj);
-    await newMsg.save();
-
-    // 全員に配信
-    io.emit("chat message", msgObj);
+  // 🔹 クライアントから履歴リクエストを受け取ったとき
+  socket.on("request history", async () => {
+    try {
+      const messages = await Message.find().sort({ _id: 1 }).limit(100);
+      socket.emit("chat history", messages);
+    } catch (err) {
+      console.error("履歴送信エラー:", err);
+    }
   });
 
-    // メッセージ削除イベント（誰でも削除可能）
-    socket.on("delete message", async (id) => {
-    await Message.findByIdAndDelete(id);
-    io.emit("remove message", id);
-    console.log(`🗑 メッセージ削除: ${id}`);
+  // 🔹 新しいメッセージを受信
+  socket.on("chat message", async (msgObj) => {
+    try {
+      const newMsg = new Message(msgObj);
+      await newMsg.save();
+      io.emit("chat message", newMsg); // DBの_id付きで配信
+    } catch (err) {
+      console.error("メッセージ保存エラー:", err);
+    }
+  });
+
+  // 🔹 メッセージ削除処理（管理者・誰でもOK）
+  socket.on("delete message", async (id) => {
+    try {
+      await Message.findByIdAndDelete(id);
+      io.emit("remove message", id); // 全員の画面から削除
+      console.log(`🗑 メッセージ削除: ${id}`);
+    } catch (err) {
+      console.error("削除エラー:", err);
+    }
   });
 
   socket.on("disconnect", () => {
@@ -55,4 +70,4 @@ io.on("connection", async (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
