@@ -73,6 +73,14 @@
   .delete-btn:hover {
     background-color: #d22;
   }
+
+  /* ✅ 名前部分（ラベル風） */
+  .name-label {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-right: 4px;
+  }
 </style>
 </head>
 <body>
@@ -213,12 +221,10 @@
 
       const nameStyle = `
         background-color: ${m.color || "transparent"};
-        padding: 2px 6px;
-        border-radius: 4px;
-        ${m.color === "red" ? "color:red;" : ""}
+        ${m.color === "red" ? "color:red;" : "color:black;"}
       `;
 
-      const content = `[${m.timestamp}] <span style="${nameStyle}">${m.name}</span>: ${m.text}`;
+      const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
       // ====== 🔐削除ボタン制御 ======
       let deleteButton = "";
