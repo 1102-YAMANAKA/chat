@@ -21,6 +21,7 @@
 </head>
 <body>
   <h2>K-Chat</h2>
+
   <div id="locked">
     🔒 このチャットルームは「あいことば」で保護されています。
     <br /><br />
@@ -55,7 +56,7 @@
     let isSuperAdmin = false;
     let fixedName = null;
     let nameColor = null;
-    let enteredKey = null; // ← 入室キーを記録
+    let enteredKey = null;
 
     const socket = io();
     const form = document.getElementById("form");
@@ -63,6 +64,7 @@
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
 
+    // Enterで入室
     document.getElementById("passInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -72,7 +74,7 @@
 
     function checkPassword() {
       const inputVal = document.getElementById("passInput").value.trim();
-      enteredKey = inputVal; // ← 入室キー保存
+      enteredKey = inputVal;
       const error = document.getElementById("error");
 
       if (inputVal === USER_PASSWORD) {
@@ -125,8 +127,9 @@
       }
       if (!text) return;
 
-      // ✅ 「200」で入室した場合は背景色を無効化
-      const appliedColor = enteredKey === USER_PASSWORD ? null : nameColor;
+      // ✅ 「200」で入室した場合、自分のコメントには色を付けない
+      const appliedColor =
+        enteredKey === USER_PASSWORD ? null : nameColor;
 
       const msgObj = {
         name,
@@ -153,12 +156,7 @@
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      // 色が欠けている場合は補完（ただし200入室者は除外）
-      if (!m.color && m.name && enteredKey !== USER_PASSWORD) {
-        const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
-        if (found) m.color = found.color;
-      }
-
+      // ✅ 他ユーザーの色はそのまま反映
       const nameStyle = `
         background-color: ${m.color || "transparent"};
         color: ${m.color === "red" ? "red" : "black"};
