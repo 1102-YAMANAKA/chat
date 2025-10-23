@@ -59,7 +59,8 @@
     "5555": { name: "坂口", color: "#ffffcc" }
   };
 
-  const RESERVED_NAMES = ["坂口", "小島", "山中", "池原", "森ユート"];
+  // 🔸 管理人も禁止名に追加
+  const RESERVED_NAMES = ["坂口", "小島", "山中", "池原", "森ユート", "管理人"];
 
   let isAdmin = false;
   let isSuperAdmin = false;
@@ -91,9 +92,11 @@
       unlockChat();
     } 
     else if (inputVal === ADMIN_PASSWORD) {
+      // 🔸 管理人として固定・背景薄赤
       isAdmin = true;
       isSuperAdmin = true;
-      nameColor = "#ffcccc";  // 🔴 890は常に赤背景
+      fixedName = "管理人";
+      nameColor = "#ffcccc";
       unlockChat();
     } 
     else if (SPECIAL_KEYS[inputVal]) {
@@ -140,7 +143,7 @@
       return;
     }
 
-    // ✅ 200で入室時：禁止名チェック
+    // ✅ 200入室時：禁止名チェック（管理人含む）
     if (enteredKey === USER_PASSWORD) {
       const lowerName = name.replace(/\s+/g, "");
       if (RESERVED_NAMES.includes(lowerName)) {
@@ -152,18 +155,9 @@
 
     if (!text) return;
 
-    // ✅ 色指定ルール
+    // ✅ 色設定
     let appliedColor = nameColor;
-
-    // 200 → 無色
-    if (enteredKey === USER_PASSWORD) {
-      appliedColor = null;
-    }
-
-    // 890 → 常に赤背景
-    if (enteredKey === ADMIN_PASSWORD) {
-      appliedColor = "#ffcccc";
-    }
+    if (enteredKey === USER_PASSWORD) appliedColor = null;
 
     const msgObj = {
       name,
