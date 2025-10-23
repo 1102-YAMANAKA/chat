@@ -1,13 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-6PGFEJBXQ9"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-6PGFEJBXQ9');
-</script>
 <meta charset="utf-8" />
 <title>K-Chat</title>
 <style>
@@ -63,7 +56,7 @@
     let isSuperAdmin = false;
     let fixedName = null;
     let nameColor = null;
-    let enteredKey = null;
+    let enteredKey = null; // 入室時のキーを記録
 
     const socket = io();
     const form = document.getElementById("form");
@@ -86,17 +79,20 @@
 
       if (inputVal === USER_PASSWORD) {
         isAdmin = false;
+        fixedName = null;
+        nameColor = null;
         unlockChat();
       } else if (inputVal === ADMIN_PASSWORD) {
         isAdmin = true;
         isSuperAdmin = true;
-        nameColor = "red"; // 🔴 管理者名の文字を赤く
+        // 管理者の「色」は赤テキストで表現。送信用には 'red' をセット。
+        nameColor = "red";
+        fixedName = null; // 管理者は名前自由
         unlockChat();
       } else if (SPECIAL_KEYS[inputVal]) {
         const info = SPECIAL_KEYS[inputVal];
         fixedName = info.name;
         nameColor = info.color;
-
         if (fixedName === "山中" || fixedName === "坂口") {
           isAdmin = true;
         }
@@ -115,6 +111,8 @@
       if (fixedName) {
         nameInput.value = fixedName;
         nameInput.disabled = true;
+      } else {
+        nameInput.disabled = false;
       }
     }
 
@@ -135,7 +133,7 @@
       }
       if (!text) return;
 
-      // 「200」で入室した人のコメントは色なし
+      // 200で入室した人のコメントは必ず無色
       let appliedColor = nameColor;
       if (enteredKey === USER_PASSWORD) {
         appliedColor = null;
@@ -145,7 +143,8 @@
         name,
         text,
         timestamp: getJSTDateTime(),
-        color: appliedColor
+        color: appliedColor,
+        senderKey: enteredKey // ← 送信者の入室キーを同梱
       };
       socket.emit("chat message", msgObj);
       input.value = "";
@@ -171,15 +170,23 @@
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      // 色の補完（履歴・他ユーザー）
-      if (!m.color && m.name) {
-        const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
-        if (found) m.color = found.color;
+      const fromUser200 = m.senderKey === USER_PASSWORD;
+      const from890 = m.senderKey === ADMIN_PASSWORD;
+
+      // 1) 200送信のものは色を一切付けない＆補完もしない
+      if (fromUser200) {
+        m.color = null;
+      } else {
+        // 2) それ以外は、色が欠けていれば名前から補完
+        if (!m.color && m.name) {
+          const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
+          if (found) m.color = found.color;
+        }
       }
 
-      // 🔴 スーパー管理者は文字を赤く表示（背景なし）
-      let nameStyle;
-      if (m.color === "red") {
+      // 3) 890送信は名前文字を赤（太字）。背景は付けない。
+      let nameStyle = "";
+      if (from890) {
         nameStyle = "color: red; font-weight: bold;";
       } else {
         nameStyle = `
@@ -190,11 +197,12 @@
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
+      // 削除ボタン
       let deleteButton = "";
       if (isAdmin) {
         if (isSuperAdmin) {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        } else if (fixedName === "坂口" && m.name !== "坂口" && m.color !== "red") {
+        } else if (fixedName === "坂口" && m.name !== "坂口" && !from890) {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
         } else if (fixedName === "山中") {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
@@ -213,3 +221,4 @@
   </script>
 </body>
 </html>
+
