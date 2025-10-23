@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6PGFEJBXQ9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6PGFEJBXQ9');
+</script>
 <meta charset="utf-8" />
 <title>K-Chat</title>
 <style>
@@ -83,7 +90,7 @@
       } else if (inputVal === ADMIN_PASSWORD) {
         isAdmin = true;
         isSuperAdmin = true;
-        nameColor = "red";
+        nameColor = "red"; // 🔴 管理者名の文字を赤く
         unlockChat();
       } else if (SPECIAL_KEYS[inputVal]) {
         const info = SPECIAL_KEYS[inputVal];
@@ -117,6 +124,7 @@
       return now.toISOString().replace("T", " ").substring(0, 19);
     }
 
+    // メッセージ送信
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const name = fixedName || nameInput.value.trim();
@@ -127,9 +135,11 @@
       }
       if (!text) return;
 
-      // ✅ 「200」で入室した場合、自分のコメントには色を付けない
-      const appliedColor =
-        enteredKey === USER_PASSWORD ? null : nameColor;
+      // 「200」で入室した人のコメントは色なし
+      let appliedColor = nameColor;
+      if (enteredKey === USER_PASSWORD) {
+        appliedColor = null;
+      }
 
       const msgObj = {
         name,
@@ -141,26 +151,42 @@
       input.value = "";
     });
 
+    // 履歴
     socket.on("chat history", (messagesList) => {
       messages.innerHTML = "";
       messagesList.forEach((m) => appendMessage(m));
     });
 
+    // 新規メッセージ
     socket.on("chat message", (m) => appendMessage(m));
+
+    // 削除反映
     socket.on("remove message", (id) => {
       const li = document.getElementById(id);
       if (li) li.remove();
     });
 
+    // メッセージ描画
     function appendMessage(m) {
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      // ✅ 他ユーザーの色はそのまま反映
-      const nameStyle = `
-        background-color: ${m.color || "transparent"};
-        color: ${m.color === "red" ? "red" : "black"};
-      `;
+      // 色の補完（履歴・他ユーザー）
+      if (!m.color && m.name) {
+        const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
+        if (found) m.color = found.color;
+      }
+
+      // 🔴 スーパー管理者は文字を赤く表示（背景なし）
+      let nameStyle;
+      if (m.color === "red") {
+        nameStyle = "color: red; font-weight: bold;";
+      } else {
+        nameStyle = `
+          background-color: ${m.color || "transparent"};
+          color: black;
+        `;
+      }
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
