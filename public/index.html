@@ -89,12 +89,14 @@
     if (inputVal === USER_PASSWORD) {
       isAdmin = false;
       unlockChat();
-    } else if (inputVal === ADMIN_PASSWORD) {
+    } 
+    else if (inputVal === ADMIN_PASSWORD) {
       isAdmin = true;
       isSuperAdmin = true;
-      nameColor = null;
+      nameColor = "#ffcccc";  // 🔴 890は常に赤背景
       unlockChat();
-    } else if (SPECIAL_KEYS[inputVal]) {
+    } 
+    else if (SPECIAL_KEYS[inputVal]) {
       const info = SPECIAL_KEYS[inputVal];
       fixedName = info.name;
       nameColor = info.color;
@@ -102,7 +104,8 @@
         isAdmin = true;
       }
       unlockChat();
-    } else {
+    } 
+    else {
       error.textContent = "⚠️ あいことばが違います。";
     }
   }
@@ -137,22 +140,29 @@
       return;
     }
 
-    // ✅ 「200」で入室した場合、禁止名チェックを強制的に行う
+    // ✅ 200で入室時：禁止名チェック
     if (enteredKey === USER_PASSWORD) {
-      const lowerName = name.replace(/\s+/g, ""); // 空白除去
+      const lowerName = name.replace(/\s+/g, "");
       if (RESERVED_NAMES.includes(lowerName)) {
         alert("⚠️ この名前は使用できません");
-        nameInput.value = ""; // 入力欄をリセット
+        nameInput.value = "";
         return;
       }
     }
 
     if (!text) return;
 
-    // 「200」で入室した人のコメントは無色
+    // ✅ 色指定ルール
     let appliedColor = nameColor;
+
+    // 200 → 無色
     if (enteredKey === USER_PASSWORD) {
       appliedColor = null;
+    }
+
+    // 890 → 常に赤背景
+    if (enteredKey === ADMIN_PASSWORD) {
+      appliedColor = "#ffcccc";
     }
 
     const msgObj = {
