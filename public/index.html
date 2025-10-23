@@ -52,11 +52,11 @@
       "5555": { name: "坂口", color: "#ffffcc" }
     };
 
-    let isAdmin = false;
-    let isSuperAdmin = false;
+    let enteredKey = null;
     let fixedName = null;
     let nameColor = null;
-    let enteredKey = null;
+    let isAdmin = false;
+    let isSuperAdmin = false;
 
     const socket = io();
     const form = document.getElementById("form");
@@ -64,7 +64,6 @@
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
 
-    // Enterで入室
     document.getElementById("passInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -73,28 +72,26 @@
     });
 
     function checkPassword() {
-      const inputVal = document.getElementById("passInput").value.trim();
-      enteredKey = inputVal;
+      const val = document.getElementById("passInput").value.trim();
       const error = document.getElementById("error");
+      enteredKey = val;
 
-      if (inputVal === USER_PASSWORD) {
+      if (val === USER_PASSWORD) {
         isAdmin = false;
-        fixedName = null;
         nameColor = null;
+        fixedName = null;
         unlockChat();
-      } else if (inputVal === ADMIN_PASSWORD) {
+      } else if (val === ADMIN_PASSWORD) {
         isAdmin = true;
         isSuperAdmin = true;
-        nameColor = "red"; // 管理者は赤文字
+        nameColor = "red";
         fixedName = null;
         unlockChat();
-      } else if (SPECIAL_KEYS[inputVal]) {
-        const info = SPECIAL_KEYS[inputVal];
+      } else if (SPECIAL_KEYS[val]) {
+        const info = SPECIAL_KEYS[val];
         fixedName = info.name;
         nameColor = info.color;
-        if (fixedName === "山中" || fixedName === "坂口") {
-          isAdmin = true;
-        }
+        if (fixedName === "山中" || fixedName === "坂口") isAdmin = true;
         unlockChat();
       } else {
         error.textContent = "⚠️ あいことばが違います。";
@@ -106,7 +103,6 @@
       document.getElementById("chat-container").style.display = "block";
       socket.emit("join", { admin: isAdmin });
       setTimeout(() => socket.emit("request history"), 200);
-
       if (fixedName) {
         nameInput.value = fixedName;
         nameInput.disabled = true;
@@ -121,102 +117,68 @@
       return now.toISOString().replace("T", " ").substring(0, 19);
     }
 
-    // メッセージ送信
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const name = fixedName || nameInput.value.trim();
       const text = input.value.trim();
-      if (!name) {
-        alert("⚠️ 名前を入力してください");
-        return;
-      }
-      if (!text) return;
+      if (!name || !text) return;
 
-      // 送信時に色判定
       let appliedColor = nameColor;
+      if (enteredKey === USER_PASSWORD) appliedColor = null; // 200は常に無色
+      if (enteredKey === ADMIN_PASSWORD) appliedColor = "red"; // 890は常に赤文字
 
-      // 200ユーザーは自分のコメントを無色にする
-      if (enteredKey === USER_PASSWORD) {
-        appliedColor = null;
-      }
-
-      const msgObj = {
+      const msg = {
         name,
         text,
         timestamp: getJSTDateTime(),
         color: appliedColor,
-        senderKey: enteredKey // ← 送信者のキーを必ず送る
+        senderKey: enteredKey
       };
-
-      socket.emit("chat message", msgObj);
+      socket.emit("chat message", msg);
       input.value = "";
     });
 
-    // 履歴
-    socket.on("chat history", (messagesList) => {
+    socket.on("chat history", (list) => {
       messages.innerHTML = "";
-      messagesList.forEach((m) => appendMessage(m));
+      list.forEach((m) => appendMessage(m));
     });
 
-    // 新規メッセージ
     socket.on("chat message", (m) => appendMessage(m));
 
-    // 削除反映
     socket.on("remove message", (id) => {
       const li = document.getElementById(id);
       if (li) li.remove();
     });
 
-    // メッセージ描画
     function appendMessage(m) {
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      // 送信者の入室キーを判定
-      const fromUser200 = m.senderKey === USER_PASSWORD;
-      const fromAdmin890 = m.senderKey === ADMIN_PASSWORD;
-
-      // 🔸 200ユーザーのコメントは完全無色（補完しない）
-      if (fromUser200) {
-        m.color = null;
-      } else if (!m.color && m.name) {
-        // 🔹 色がない場合は名前から補完
-        const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
-        if (found) m.color = found.color;
-      }
-
-      // 🔴 管理者（890）の場合は赤文字
+      const key = m.senderKey;
       let nameStyle = "";
-      if (fromAdmin890) {
+
+      // 1️⃣ 890 → 赤文字（太字）
+      if (key === ADMIN_PASSWORD) {
         nameStyle = "color: red; font-weight: bold;";
-      } else {
-        nameStyle = `
-          background-color: ${m.color || "transparent"};
-          color: black;
-        `;
+      }
+      // 2️⃣ 200 → 無色（背景なし）
+      else if (key === USER_PASSWORD) {
+        nameStyle = "color: black;";
+      }
+      // 3️⃣ 通常 or 特殊キー → 背景色補完
+      else {
+        if (!m.color && m.name) {
+          const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
+          if (found) m.color = found.color;
+        }
+        nameStyle = `background-color: ${m.color || "transparent"}; color: black;`;
       }
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
-      let deleteButton = "";
-      if (isAdmin) {
-        if (isSuperAdmin) {
-          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        } else if (fixedName === "坂口" && m.name !== "坂口" && !fromAdmin890) {
-          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        } else if (fixedName === "山中") {
-          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        }
-      }
-
-      li.innerHTML = `<span>${content}</span>${deleteButton}`;
+      li.innerHTML = `<span>${content}</span>`;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
-    }
-
-    function deleteMessage(id) {
-      const confirmDel = confirm("このメッセージを削除しますか？");
-      if (confirmDel) socket.emit("delete message", id);
     }
   </script>
 </body>
