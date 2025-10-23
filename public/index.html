@@ -1,14 +1,6 @@
 <!DOCTYPE html>
 <html>
   <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-6PGFEJBXQ9"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-6PGFEJBXQ9');
-</script>
 <meta charset="utf-8" />
 <title>K-Chat</title>
 <style>
@@ -30,14 +22,19 @@
     margin-bottom: 10px;
     background: white;
   }
+  /* ✅ flex解除して普通のblock構成に */
   li {
     padding: 5px 10px;
     border-bottom: 1px solid #eee;
     font-size: 14px;
+  }
+
+  .msg-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
+
   form {
     display: flex;
     gap: 5px;
@@ -74,7 +71,7 @@
     background-color: #d22;
   }
 
-  /* ✅ 名前部分（背景ラベル風） */
+  /* ✅ 名前背景ラベル */
   .name-label {
     display: inline-block;
     padding: 2px 6px;
@@ -110,13 +107,13 @@
     const USER_PASSWORD = "200";
     const ADMIN_PASSWORD = "890";
 
-    // 特殊あいことば設定（背景色含む）
+    // 特殊あいことば設定（背景色あり）
     const SPECIAL_KEYS = {
-      "4545": { name: "池原", color: "#ffe4e1" },  // 薄ピンク
-      "0823": { name: "小島", color: "#e6e6fa" },  // 薄紫
+      "4545": { name: "池原", color: "#ffe4e1" },   // 薄ピンク
+      "0823": { name: "小島", color: "#e6e6fa" },   // 薄紫
       "1021": { name: "森ユート", color: "#ccffcc" }, // 薄緑
-      "1102": { name: "山中", color: "#ccffff" },  // 薄水色
-      "5555": { name: "坂口", color: "#ffffcc" }   // 薄黄色
+      "1102": { name: "山中", color: "#ccffff" },   // 薄水色
+      "5555": { name: "坂口", color: "#ffffcc" }    // 薄黄色
     };
 
     let isAdmin = false;
@@ -147,7 +144,6 @@
         isAdmin = false;
         unlockChat();
       } else if (inputVal === ADMIN_PASSWORD) {
-        // 890 → スーパー管理者（名前固定なし、自分削除OK）
         isAdmin = true;
         isSuperAdmin = true;
         nameColor = "red";
@@ -227,14 +223,22 @@
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      const nameStyle = `
-        background-color: ${m.color || "transparent"};
-        color: ${m.color === "red" ? "red" : "black"};
-      `;
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "name-label";
+      nameSpan.textContent = m.name;
+      nameSpan.style.backgroundColor = m.color || "transparent";
+      nameSpan.style.color = m.color === "red" ? "red" : "black";
 
-      const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
+      const messageText = document.createElement("span");
+      messageText.textContent = ` ${m.text}`;
 
-      // ====== 削除ボタン制御 ======
+      const content = document.createElement("div");
+      content.className = "msg-content";
+      content.innerHTML = `[${m.timestamp}] `;
+      content.appendChild(nameSpan);
+      content.appendChild(messageText);
+
+      // 🔐削除ボタン制御
       let deleteButton = "";
       if (isAdmin) {
         if (isSuperAdmin) {
@@ -246,7 +250,14 @@
         }
       }
 
-      li.innerHTML = `<span>${content}</span>${deleteButton}`;
+      li.innerHTML = "";
+      li.appendChild(content);
+      if (deleteButton) {
+        const btn = document.createElement("div");
+        btn.innerHTML = deleteButton;
+        li.appendChild(btn.firstChild);
+      }
+
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
     }
