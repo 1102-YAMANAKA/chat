@@ -56,7 +56,8 @@
     "0823": { name: "小島", color: "#e6e6fa" },
     "1021": { name: "森ユート", color: "#ccffcc" },
     "1102": { name: "山中", color: "#ccffff" },
-    "5555": { name: "坂口", color: "#ffffcc" }
+    "5555": { name: "坂口", color: "#ffffcc" },
+    "890": { name: "管理人",color: "#ffcccc" }
   };
 
   // 🔸 管理人も禁止名に追加
@@ -96,7 +97,7 @@
       isAdmin = true;
       isSuperAdmin = true;
       fixedName = "管理人";
-      nameColor = "#ffcccc";
+      nameColor = info.color;
       unlockChat();
     } 
     else if (SPECIAL_KEYS[inputVal]) {
