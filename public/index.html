@@ -1,201 +1,253 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="utf-8" />
-    <title>K-Chat</title>
-    <style>
-      body {
-        font-family: sans-serif;
-        background: #fafafa;
-        margin: 20px;
-      }
-      h2 {
-        color: #333;
-        margin-bottom: 10px;
-      }
-      #messages {
-        list-style: none;
-        padding: 0;
-        height: 70vh;
-        overflow-y: scroll;
-        border: 1px solid #ddd;
-        margin-bottom: 10px;
-        background: white;
-      }
-      li {
-        padding: 5px 10px;
-        border-bottom: 1px solid #eee;
-        font-size: 14px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      form {
-        display: flex;
-        gap: 5px;
-      }
-      input,
-      button {
-        padding: 10px;
-        font-size: 14px;
-      }
-      #name {
-        width: 150px;
-      }
-      #input {
-        flex: 1;
-      }
-      #chat-container {
-        display: none;
-      }
-      #locked {
-        text-align: center;
-        margin-top: 150px;
-        color: #444;
-        font-size: 18px;
-      }
-      .delete-btn {
-        background-color: #ff4d4d;
-        border: none;
-        color: white;
-        border-radius: 4px;
-        padding: 2px 6px;
-        cursor: pointer;
-      }
-      .delete-btn:hover {
-        background-color: #d22;
-      }
-    </style>
-  </head>
-  <body>
-    <h2>K-Chat</h2>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6PGFEJBXQ9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6PGFEJBXQ9');
+</script>
+<meta charset="utf-8" />
+<title>K-Chat</title>
+<style>
+  body {
+    font-family: sans-serif;
+    background: #fafafa;
+    margin: 20px;
+  }
+  h2 {
+    color: #333;
+    margin-bottom: 10px;
+  }
+  #messages {
+    list-style: none;
+    padding: 0;
+    height: 70vh;
+    overflow-y: scroll;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    background: white;
+  }
+  li {
+    padding: 5px 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  form {
+    display: flex;
+    gap: 5px;
+  }
+  input,
+  button {
+    padding: 10px;
+    font-size: 14px;
+  }
+  #name {
+    width: 150px;
+  }
+  #input {
+    flex: 1;
+  }
+  #chat-container {
+    display: none;
+  }
+  #locked {
+    text-align: center;
+    margin-top: 150px;
+    color: #444;
+    font-size: 18px;
+  }
+  .delete-btn {
+    background-color: #ff4d4d;
+    border: none;
+    color: white;
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+  }
+  .delete-btn:hover {
+    background-color: #d22;
+  }
+</style>
+</head>
+<body>
+  <h2>K-Chat</h2>
 
-    <!-- 🔒 あいことば入力画面 -->
-    <div id="locked">
-      🔒 このチャットルームは「あいことば」で保護されています。
-      <br /><br />
-      <input
-        id="passInput"
-        type="password"
-        placeholder="あいことばを入力..."
-      />
-      <button onclick="checkPassword()">入室</button>
-      <p id="error" style="color: red"></p>
-    </div>
+  <!-- 🔒 あいことば入力画面 -->
+  <div id="locked">
+    🔒 このチャットルームは「あいことば」で保護されています。
+    <br /><br />
+    <input id="passInput" type="password" placeholder="あいことばを入力..." />
+    <button onclick="checkPassword()">入室</button>
+    <p id="error" style="color: red"></p>
+  </div>
 
-    <!-- 💬 チャット本体 -->
-    <div id="chat-container">
-      <ul id="messages"></ul>
-      <form id="form">
-        <input id="name" placeholder="名前を入力..." autocomplete="off" />
-        <input id="input" placeholder="メッセージを入力..." autocomplete="off" />
-        <button>送信</button>
-      </form>
-    </div>
+  <!-- 💬 チャット本体 -->
+  <div id="chat-container">
+    <ul id="messages"></ul>
+    <form id="form">
+      <input id="name" placeholder="名前を入力..." autocomplete="off" />
+      <input id="input" placeholder="メッセージを入力..." autocomplete="off" />
+      <button>送信</button>
+    </form>
+  </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-      // ========================
-      // 🔐 あいことば設定（2種類）
-      // ========================
-      const USER_PASSWORD = "200"; // 一般ユーザー用
-      const ADMIN_PASSWORD = "890"; // 管理者用
-      let isAdmin = false;
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const USER_PASSWORD = "200";
+    const ADMIN_PASSWORD = "890";
 
-      const socket = io();
-      const form = document.getElementById("form");
-      const input = document.getElementById("input");
-      const nameInput = document.getElementById("name");
-      const messages = document.getElementById("messages");
+    const SPECIAL_KEYS = {
+      "4545": { name: "池原", color: "#ffe4e1" },
+      "0823": { name: "小島", color: "#e6e6fa" },
+      "1021": { name: "森ユート", color: "#ccffcc" },
+      "1102": { name: "山中", color: "#ccffff" }
+    };
 
-      // ====== あいことば確認 ======
-      function checkPassword() {
-        const inputVal = document.getElementById("passInput").value.trim();
-        const error = document.getElementById("error");
+    let isAdmin = false;
+    let isSuperAdmin = false;
+    let fixedName = null;
+    let nameColor = null;
+    let browserID = null; // 🆔 各ブラウザ固有ID
 
-        if (inputVal === USER_PASSWORD) {
-          isAdmin = false;
-          unlockChat();
-        } else if (inputVal === ADMIN_PASSWORD) {
+    const socket = io();
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+    const nameInput = document.getElementById("name");
+    const messages = document.getElementById("messages");
+
+    // ====== 🆔 一意ブラウザID生成 ======
+    function getBrowserID() {
+      let id = localStorage.getItem("browserID");
+      if (!id) {
+        // 1〜999の簡易IDを生成
+        id = Math.floor(Math.random() * 999) + 1;
+        localStorage.setItem("browserID", id);
+      }
+      return id.toString().padStart(3, "0"); // 3桁化
+    }
+
+    // ====== あいことば確認 ======
+    function checkPassword() {
+      const inputVal = document.getElementById("passInput").value.trim();
+      const error = document.getElementById("error");
+
+      browserID = getBrowserID(); // ←ここで一意IDを確定
+
+      if (inputVal === USER_PASSWORD) {
+        isAdmin = false;
+        unlockChat();
+      } else if (inputVal === ADMIN_PASSWORD) {
+        isAdmin = true;
+        isSuperAdmin = true;
+        fixedName = "坂口";
+        nameColor = "red";
+        unlockChat();
+      } else if (SPECIAL_KEYS[inputVal]) {
+        const info = SPECIAL_KEYS[inputVal];
+        fixedName = info.name;
+        nameColor = info.color;
+
+        if (fixedName === "山中") {
           isAdmin = true;
-          unlockChat();
-        } else {
-          error.textContent = "⚠️ あいことばが違います。";
+        }
+        unlockChat();
+      } else {
+        error.textContent = "⚠️ あいことばが違います。";
+      }
+    }
+
+    // ====== チャット画面表示 ======
+    function unlockChat() {
+      document.getElementById("locked").style.display = "none";
+      document.getElementById("chat-container").style.display = "block";
+      socket.emit("join", { admin: isAdmin });
+      setTimeout(() => socket.emit("request history"), 200);
+
+      if (fixedName) {
+        nameInput.value = fixedName;
+        nameInput.disabled = true;
+      }
+    }
+
+    // ====== JST時間 ======
+    function getJSTDateTime() {
+      const now = new Date();
+      now.setHours(now.getHours() + 9);
+      return now.toISOString().replace("T", " ").substring(0, 19);
+    }
+
+    // ====== 送信処理 ======
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const name = fixedName || nameInput.value.trim();
+      const text = input.value.trim();
+      if (!name) {
+        alert("⚠️ 名前を入力してください");
+        return;
+      }
+      if (!text) return;
+
+      const msgObj = { name, text, timestamp: getJSTDateTime(), color: nameColor, id: browserID };
+      socket.emit("chat message", msgObj);
+      input.value = "";
+    });
+
+    // ====== 履歴表示 ======
+    socket.on("chat history", (messagesList) => {
+      messages.innerHTML = "";
+      messagesList.forEach((m) => appendMessage(m));
+    });
+
+    // ====== 新規メッセージ ======
+    socket.on("chat message", (m) => appendMessage(m));
+
+    // ====== 削除反映 ======
+    socket.on("remove message", (id) => {
+      const li = document.getElementById(id);
+      if (li) li.remove();
+    });
+
+    // ====== メッセージ表示 ======
+    function appendMessage(m) {
+      const li = document.createElement("li");
+      li.id = m._id || Math.random().toString(36).substr(2, 9);
+
+      const nameStyle = `
+        background-color: ${m.color || "transparent"};
+        padding: 2px 6px;
+        border-radius: 4px;
+        ${m.color === "red" ? "color:red;" : ""}
+      `;
+
+      const content = `[${m.timestamp}] <span style="${nameStyle}">${m.name}(ID:${m.id || "???"})</span>: ${m.text}`;
+
+      // 削除ボタン制御
+      let deleteButton = "";
+      if (isAdmin) {
+        if (isSuperAdmin && m.name !== "坂口") {
+          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
+        } else if (fixedName === "山中") {
+          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
         }
       }
 
-      // ====== チャット画面表示 ======
-      function unlockChat() {
-        document.getElementById("locked").style.display = "none";
-        document.getElementById("chat-container").style.display = "block";
+      li.innerHTML = `<span>${content}</span>${deleteButton}`;
+      messages.appendChild(li);
+      messages.scrollTop = messages.scrollHeight;
+    }
 
-        // 管理者かどうかをコンソールに表示（デバッグ確認）
-        console.log("isAdmin =", isAdmin);
-
-        // 管理者フラグを送信（サーバー側が反応するように）
-        socket.emit("join", { admin: isAdmin });
-
-        // 過去メッセージ取得を遅延実行（描画反映待ち）
-        setTimeout(() => socket.emit("request history"), 200);
-      }
-
-      // ====== JST時間 ======
-      function getJSTDateTime() {
-        const now = new Date();
-        now.setHours(now.getHours() + 9);
-        return now.toISOString().replace("T", " ").substring(0, 19);
-      }
-
-      // ====== 送信処理 ======
-      form.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const name = nameInput.value.trim();
-        const text = input.value.trim();
-        if (!name) {
-          alert("⚠️ 名前を入力してください");
-          return;
-        }
-        if (!text) return;
-
-        const msgObj = { name, text, timestamp: getJSTDateTime() };
-        socket.emit("chat message", msgObj);
-        input.value = "";
-      });
-
-      // ====== 履歴表示 ======
-      socket.on("chat history", (messagesList) => {
-        messages.innerHTML = "";
-        messagesList.forEach((m) => appendMessage(m));
-      });
-
-      // ====== 新規メッセージ ======
-      socket.on("chat message", (m) => appendMessage(m));
-
-      // ====== 削除反映 ======
-      socket.on("remove message", (id) => {
-        const li = document.getElementById(id);
-        if (li) li.remove();
-      });
-
-      // ====== メッセージ表示 ======
-      function appendMessage(m) {
-        const li = document.createElement("li");
-        li.id = m._id || Math.random().toString(36).substr(2, 9); // 一時ID保険
-
-        const content = `[${m.timestamp}] ${m.name}: ${m.text}`;
-        li.innerHTML = `
-          <span>${content}</span>
-          ${isAdmin ? `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>` : ""}
-        `;
-        messages.appendChild(li);
-        messages.scrollTop = messages.scrollHeight;
-      }
-
-      // ====== 削除ボタン押下 ======
-      function deleteMessage(id) {
-        const confirmDel = confirm("このメッセージを削除しますか？");
-        if (confirmDel) socket.emit("delete message", id);
-      }
-    </script>
-  </body>
+    // ====== 削除ボタン押下 ======
+    function deleteMessage(id) {
+      const confirmDel = confirm("このメッセージを削除しますか？");
+      if (confirmDel) socket.emit("delete message", id);
+    }
+  </script>
+</body>
 </html>
+
