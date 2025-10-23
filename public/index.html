@@ -56,7 +56,7 @@
     let isSuperAdmin = false;
     let fixedName = null;
     let nameColor = null;
-    let enteredKey = null; // 入室時のキーを記録
+    let enteredKey = null;
 
     const socket = io();
     const form = document.getElementById("form");
@@ -85,9 +85,8 @@
       } else if (inputVal === ADMIN_PASSWORD) {
         isAdmin = true;
         isSuperAdmin = true;
-        // 管理者の「色」は赤テキストで表現。送信用には 'red' をセット。
-        nameColor = "red";
-        fixedName = null; // 管理者は名前自由
+        nameColor = "red"; // 管理者は赤文字
+        fixedName = null;
         unlockChat();
       } else if (SPECIAL_KEYS[inputVal]) {
         const info = SPECIAL_KEYS[inputVal];
@@ -133,8 +132,10 @@
       }
       if (!text) return;
 
-      // 200で入室した人のコメントは必ず無色
+      // 送信時に色判定
       let appliedColor = nameColor;
+
+      // 200ユーザーは自分のコメントを無色にする
       if (enteredKey === USER_PASSWORD) {
         appliedColor = null;
       }
@@ -144,8 +145,9 @@
         text,
         timestamp: getJSTDateTime(),
         color: appliedColor,
-        senderKey: enteredKey // ← 送信者の入室キーを同梱
+        senderKey: enteredKey // ← 送信者のキーを必ず送る
       };
+
       socket.emit("chat message", msgObj);
       input.value = "";
     });
@@ -170,23 +172,22 @@
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
+      // 送信者の入室キーを判定
       const fromUser200 = m.senderKey === USER_PASSWORD;
-      const from890 = m.senderKey === ADMIN_PASSWORD;
+      const fromAdmin890 = m.senderKey === ADMIN_PASSWORD;
 
-      // 1) 200送信のものは色を一切付けない＆補完もしない
+      // 🔸 200ユーザーのコメントは完全無色（補完しない）
       if (fromUser200) {
         m.color = null;
-      } else {
-        // 2) それ以外は、色が欠けていれば名前から補完
-        if (!m.color && m.name) {
-          const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
-          if (found) m.color = found.color;
-        }
+      } else if (!m.color && m.name) {
+        // 🔹 色がない場合は名前から補完
+        const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
+        if (found) m.color = found.color;
       }
 
-      // 3) 890送信は名前文字を赤（太字）。背景は付けない。
+      // 🔴 管理者（890）の場合は赤文字
       let nameStyle = "";
-      if (from890) {
+      if (fromAdmin890) {
         nameStyle = "color: red; font-weight: bold;";
       } else {
         nameStyle = `
@@ -197,12 +198,11 @@
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
-      // 削除ボタン
       let deleteButton = "";
       if (isAdmin) {
         if (isSuperAdmin) {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        } else if (fixedName === "坂口" && m.name !== "坂口" && !from890) {
+        } else if (fixedName === "坂口" && m.name !== "坂口" && !fromAdmin890) {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
         } else if (fixedName === "山中") {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
@@ -221,4 +221,3 @@
   </script>
 </body>
 </html>
-
