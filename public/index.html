@@ -1,92 +1,26 @@
 <!DOCTYPE html>
 <html>
-  <head>
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-6PGFEJBXQ9"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-6PGFEJBXQ9');
-</script>
+<head>
 <meta charset="utf-8" />
 <title>K-Chat</title>
 <style>
-  body {
-    font-family: sans-serif;
-    background: #fafafa;
-    margin: 20px;
-  }
-  h2 {
-    color: #333;
-    margin-bottom: 10px;
-  }
-  #messages {
-    list-style: none;
-    padding: 0;
-    height: 70vh;
-    overflow-y: scroll;
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    background: white;
-  }
-  li {
-    padding: 5px 10px;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-  form {
-    display: flex;
-    gap: 5px;
-  }
-  input,
-  button {
-    padding: 10px;
-    font-size: 14px;
-  }
-  #name {
-    width: 150px;
-  }
-  #input {
-    flex: 1;
-  }
-  #chat-container {
-    display: none;
-  }
-  #locked {
-    text-align: center;
-    margin-top: 150px;
-    color: #444;
-    font-size: 18px;
-  }
-  .delete-btn {
-    background-color: #ff4d4d;
-    border: none;
-    color: white;
-    border-radius: 4px;
-    padding: 2px 6px;
-    cursor: pointer;
-  }
-  .delete-btn:hover {
-    background-color: #d22;
-  }
-
-  /* ✅ 名前ラベル */
-  .name-label {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-right: 4px;
-  }
+  body { font-family: sans-serif; background: #fafafa; margin: 20px; }
+  h2 { color: #333; margin-bottom: 10px; }
+  #messages { list-style: none; padding: 0; height: 70vh; overflow-y: scroll; border: 1px solid #ddd; margin-bottom: 10px; background: white; }
+  li { padding: 5px 10px; border-bottom: 1px solid #eee; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
+  form { display: flex; gap: 5px; }
+  input, button { padding: 10px; font-size: 14px; }
+  #name { width: 150px; }
+  #input { flex: 1; }
+  #chat-container { display: none; }
+  #locked { text-align: center; margin-top: 150px; color: #444; font-size: 18px; }
+  .delete-btn { background-color: #ff4d4d; border: none; color: white; border-radius: 4px; padding: 2px 6px; cursor: pointer; }
+  .delete-btn:hover { background-color: #d22; }
+  .name-label { display: inline-block; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
 </style>
 </head>
 <body>
   <h2>K-Chat</h2>
-
-  <!-- 🔒 あいことば入力画面 -->
   <div id="locked">
     🔒 このチャットルームは「あいことば」で保護されています。
     <br /><br />
@@ -95,7 +29,6 @@
     <p id="error" style="color: red"></p>
   </div>
 
-  <!-- 💬 チャット本体 -->
   <div id="chat-container">
     <ul id="messages"></ul>
     <form id="form">
@@ -122,6 +55,7 @@
     let isSuperAdmin = false;
     let fixedName = null;
     let nameColor = null;
+    let enteredKey = null; // ← 入室キーを記録
 
     const socket = io();
     const form = document.getElementById("form");
@@ -129,7 +63,6 @@
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
 
-    // Enterで入室
     document.getElementById("passInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -139,6 +72,7 @@
 
     function checkPassword() {
       const inputVal = document.getElementById("passInput").value.trim();
+      enteredKey = inputVal; // ← 入室キー保存
       const error = document.getElementById("error");
 
       if (inputVal === USER_PASSWORD) {
@@ -191,11 +125,14 @@
       }
       if (!text) return;
 
+      // ✅ 「200」で入室した場合は背景色を無効化
+      const appliedColor = enteredKey === USER_PASSWORD ? null : nameColor;
+
       const msgObj = {
         name,
         text,
         timestamp: getJSTDateTime(),
-        color: nameColor
+        color: appliedColor
       };
       socket.emit("chat message", msgObj);
       input.value = "";
@@ -216,8 +153,8 @@
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      // ✅ 色が欠けている場合は自動補完
-      if (!m.color && m.name) {
+      // 色が欠けている場合は補完（ただし200入室者は除外）
+      if (!m.color && m.name && enteredKey !== USER_PASSWORD) {
         const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
         if (found) m.color = found.color;
       }
