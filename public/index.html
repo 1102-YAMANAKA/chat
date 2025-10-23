@@ -64,6 +64,7 @@
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
 
+    // ===== Enterで入室 =====
     document.getElementById("passInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -71,6 +72,7 @@
       }
     });
 
+    // ===== あいことばチェック =====
     function checkPassword() {
       const val = document.getElementById("passInput").value.trim();
       const error = document.getElementById("error");
@@ -84,7 +86,7 @@
       } else if (val === ADMIN_PASSWORD) {
         isAdmin = true;
         isSuperAdmin = true;
-        nameColor = "red";
+        nameColor = "red"; // 管理者赤文字
         fixedName = null;
         unlockChat();
       } else if (SPECIAL_KEYS[val]) {
@@ -98,11 +100,13 @@
       }
     }
 
+    // ===== チャット解放 =====
     function unlockChat() {
       document.getElementById("locked").style.display = "none";
       document.getElementById("chat-container").style.display = "block";
       socket.emit("join", { admin: isAdmin });
       setTimeout(() => socket.emit("request history"), 200);
+
       if (fixedName) {
         nameInput.value = fixedName;
         nameInput.disabled = true;
@@ -111,12 +115,14 @@
       }
     }
 
+    // ===== JST時間 =====
     function getJSTDateTime() {
       const now = new Date();
       now.setHours(now.getHours() + 9);
       return now.toISOString().replace("T", " ").substring(0, 19);
     }
 
+    // ===== メッセージ送信 =====
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const name = fixedName || nameInput.value.trim();
@@ -124,8 +130,8 @@
       if (!name || !text) return;
 
       let appliedColor = nameColor;
-      if (enteredKey === USER_PASSWORD) appliedColor = null; // 200は常に無色
-      if (enteredKey === ADMIN_PASSWORD) appliedColor = "red"; // 890は常に赤文字
+      if (enteredKey === USER_PASSWORD) appliedColor = null; // 200は無色固定
+      if (enteredKey === ADMIN_PASSWORD) appliedColor = "red"; // 890は赤文字
 
       const msg = {
         name,
@@ -134,6 +140,7 @@
         color: appliedColor,
         senderKey: enteredKey
       };
+
       socket.emit("chat message", msg);
       input.value = "";
     });
@@ -144,12 +151,12 @@
     });
 
     socket.on("chat message", (m) => appendMessage(m));
-
     socket.on("remove message", (id) => {
       const li = document.getElementById(id);
       if (li) li.remove();
     });
 
+    // ===== メッセージ描画 =====
     function appendMessage(m) {
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
@@ -157,15 +164,15 @@
       const key = m.senderKey;
       let nameStyle = "";
 
-      // 1️⃣ 890 → 赤文字（太字）
+      // 🔴 890 → 赤文字
       if (key === ADMIN_PASSWORD) {
         nameStyle = "color: red; font-weight: bold;";
       }
-      // 2️⃣ 200 → 無色（背景なし）
+      // ⚫ 200 → 無色、補完もしない
       else if (key === USER_PASSWORD) {
         nameStyle = "color: black;";
       }
-      // 3️⃣ 通常 or 特殊キー → 背景色補完
+      // 🎨 その他 → 色補完あり
       else {
         if (!m.color && m.name) {
           const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
@@ -175,7 +182,6 @@
       }
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
-
       li.innerHTML = `<span>${content}</span>`;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
