@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-6PGFEJBXQ9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-6PGFEJBXQ9');
+</script>
 <meta charset="utf-8" />
 <title>K-Chat</title>
 <style>
@@ -52,11 +59,13 @@
       "5555": { name: "坂口", color: "#ffffcc" }
     };
 
-    let enteredKey = null;
-    let fixedName = null;
-    let nameColor = null;
+    const RESERVED_NAMES = ["坂口", "小島", "山中", "池原", "森ユート"];
+
     let isAdmin = false;
     let isSuperAdmin = false;
+    let fixedName = null;
+    let nameColor = null;
+    let enteredKey = null;
 
     const socket = io();
     const form = document.getElementById("form");
@@ -64,7 +73,7 @@
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
 
-    // ===== Enterで入室 =====
+    // Enterで入室
     document.getElementById("passInput").addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -72,35 +81,33 @@
       }
     });
 
-    // ===== あいことばチェック =====
     function checkPassword() {
-      const val = document.getElementById("passInput").value.trim();
+      const inputVal = document.getElementById("passInput").value.trim();
+      enteredKey = inputVal;
       const error = document.getElementById("error");
-      enteredKey = val;
 
-      if (val === USER_PASSWORD) {
+      if (inputVal === USER_PASSWORD) {
         isAdmin = false;
-        nameColor = null;
-        fixedName = null;
         unlockChat();
-      } else if (val === ADMIN_PASSWORD) {
+      } else if (inputVal === ADMIN_PASSWORD) {
         isAdmin = true;
         isSuperAdmin = true;
-        nameColor = "red"; // 管理者赤文字
-        fixedName = null;
+        nameColor = null; // 🔸 赤文字を削除（通常表示）
         unlockChat();
-      } else if (SPECIAL_KEYS[val]) {
-        const info = SPECIAL_KEYS[val];
+      } else if (SPECIAL_KEYS[inputVal]) {
+        const info = SPECIAL_KEYS[inputVal];
         fixedName = info.name;
         nameColor = info.color;
-        if (fixedName === "山中" || fixedName === "坂口") isAdmin = true;
+
+        if (fixedName === "山中" || fixedName === "坂口") {
+          isAdmin = true;
+        }
         unlockChat();
       } else {
         error.textContent = "⚠️ あいことばが違います。";
       }
     }
 
-    // ===== チャット解放 =====
     function unlockChat() {
       document.getElementById("locked").style.display = "none";
       document.getElementById("chat-container").style.display = "block";
@@ -110,81 +117,100 @@
       if (fixedName) {
         nameInput.value = fixedName;
         nameInput.disabled = true;
-      } else {
-        nameInput.disabled = false;
       }
     }
 
-    // ===== JST時間 =====
     function getJSTDateTime() {
       const now = new Date();
       now.setHours(now.getHours() + 9);
       return now.toISOString().replace("T", " ").substring(0, 19);
     }
 
-    // ===== メッセージ送信 =====
+    // メッセージ送信
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const name = fixedName || nameInput.value.trim();
       const text = input.value.trim();
-      if (!name || !text) return;
+      if (!name) {
+        alert("⚠️ 名前を入力してください");
+        return;
+      }
 
+      // 🔸 200で入室した人は、禁止名チェック
+      if (enteredKey === USER_PASSWORD && RESERVED_NAMES.includes(name)) {
+        alert("⚠️ この名前は使用できません");
+        return;
+      }
+
+      if (!text) return;
+
+      // 「200」で入室した人のコメントは色なし
       let appliedColor = nameColor;
-      if (enteredKey === USER_PASSWORD) appliedColor = null; // 200は無色固定
-      if (enteredKey === ADMIN_PASSWORD) appliedColor = "red"; // 890は赤文字
+      if (enteredKey === USER_PASSWORD) {
+        appliedColor = null;
+      }
 
-      const msg = {
+      const msgObj = {
         name,
         text,
         timestamp: getJSTDateTime(),
-        color: appliedColor,
-        senderKey: enteredKey
+        color: appliedColor
       };
-
-      socket.emit("chat message", msg);
+      socket.emit("chat message", msgObj);
       input.value = "";
     });
 
-    socket.on("chat history", (list) => {
+    // 履歴
+    socket.on("chat history", (messagesList) => {
       messages.innerHTML = "";
-      list.forEach((m) => appendMessage(m));
+      messagesList.forEach((m) => appendMessage(m));
     });
 
+    // 新規メッセージ
     socket.on("chat message", (m) => appendMessage(m));
+
+    // 削除反映
     socket.on("remove message", (id) => {
       const li = document.getElementById(id);
       if (li) li.remove();
     });
 
-    // ===== メッセージ描画 =====
+    // メッセージ描画
     function appendMessage(m) {
       const li = document.createElement("li");
       li.id = m._id || Math.random().toString(36).substr(2, 9);
 
-      const key = m.senderKey;
-      let nameStyle = "";
+      if (!m.color && m.name) {
+        const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
+        if (found) m.color = found.color;
+      }
 
-      // 🔴 890 → 赤文字
-      if (key === ADMIN_PASSWORD) {
-        nameStyle = "color: red; font-weight: bold;";
-      }
-      // ⚫ 200 → 無色、補完もしない
-      else if (key === USER_PASSWORD) {
-        nameStyle = "color: black;";
-      }
-      // 🎨 その他 → 色補完あり
-      else {
-        if (!m.color && m.name) {
-          const found = Object.values(SPECIAL_KEYS).find(v => v.name === m.name);
-          if (found) m.color = found.color;
-        }
-        nameStyle = `background-color: ${m.color || "transparent"}; color: black;`;
-      }
+      const nameStyle = `
+        background-color: ${m.color || "transparent"};
+        color: black;
+      `;
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
-      li.innerHTML = `<span>${content}</span>`;
+
+      let deleteButton = "";
+      if (isAdmin) {
+        if (isSuperAdmin) {
+          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
+        } else if (fixedName === "坂口" && m.name !== "坂口") {
+          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
+        } else if (fixedName === "山中") {
+          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
+        }
+      }
+
+      li.innerHTML = `<span>${content}</span>${deleteButton}`;
       messages.appendChild(li);
       messages.scrollTop = messages.scrollHeight;
+    }
+
+    function deleteMessage(id) {
+      const confirmDel = confirm("このメッセージを削除しますか？");
+      if (confirmDel) socket.emit("delete message", id);
     }
   </script>
 </body>
