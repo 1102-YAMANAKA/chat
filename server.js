@@ -42,16 +42,25 @@ io.on("connection", async (socket) => {
     }
   });
 
-  // 🔹 新しいメッセージを受信
-  socket.on("chat message", async (msgObj) => {
-    try {
-      const newMsg = new Message(msgObj);
-      await newMsg.save();
-      io.emit("chat message", newMsg); // DBの_id付きで配信
-    } catch (err) {
-      console.error("メッセージ保存エラー:", err);
-    }
-  });
+// M-9 新しいメッセージを受信
+socket.on("chat message", async (msgObj) => {
+  try {
+    // senderKeyを確実に保持したオブジェクトを作成
+    const safeMsg = {
+      ...msgObj,
+      senderKey: msgObj.senderKey || null
+    };
+
+    // MongoDBへ保存
+    const newMsg = new Message(safeMsg);
+    await newMsg.save();
+
+    // 他のクライアントへもsenderKey付きで送信
+    io.emit("chat message", newMsg);
+  } catch (err) {
+    console.error("メッセージ保存エラー:", err);
+  }
+});
 
   // 🔹 メッセージ削除処理（管理者・誰でもOK）
   socket.on("delete message", async (id) => {
