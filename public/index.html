@@ -93,11 +93,10 @@
       unlockChat();
     } 
     else if (inputVal === ADMIN_PASSWORD) {
-      // 🔸 管理人として固定・背景薄赤
       isAdmin = true;
       isSuperAdmin = true;
       fixedName = "管理人";
-      nameColor = info.color;
+      nameColor = null;
       unlockChat();
     } 
     else if (SPECIAL_KEYS[inputVal]) {
