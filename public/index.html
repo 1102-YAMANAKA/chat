@@ -102,18 +102,19 @@
     const USER_PASSWORD = "200";
     const ADMIN_PASSWORD = "890";
 
+    // 特殊あいことば設定
     const SPECIAL_KEYS = {
       "4545": { name: "池原", color: "#ffe4e1" },
       "0823": { name: "小島", color: "#e6e6fa" },
       "1021": { name: "森ユート", color: "#ccffcc" },
-      "1102": { name: "山中", color: "#ccffff" }
+      "1102": { name: "山中", color: "#ccffff" },
+      "5555": { name: "坂口", color: "#ffffcc" }
     };
 
     let isAdmin = false;
     let isSuperAdmin = false;
     let fixedName = null;
     let nameColor = null;
-    let browserID = null; // 🆔 各ブラウザ固有ID
 
     const socket = io();
     const form = document.getElementById("form");
@@ -121,31 +122,18 @@
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
 
-    // ====== 🆔 一意ブラウザID生成 ======
-    function getBrowserID() {
-      let id = localStorage.getItem("browserID");
-      if (!id) {
-        // 1〜999の簡易IDを生成
-        id = Math.floor(Math.random() * 999) + 1;
-        localStorage.setItem("browserID", id);
-      }
-      return id.toString().padStart(3, "0"); // 3桁化
-    }
-
     // ====== あいことば確認 ======
     function checkPassword() {
       const inputVal = document.getElementById("passInput").value.trim();
       const error = document.getElementById("error");
 
-      browserID = getBrowserID(); // ←ここで一意IDを確定
-
       if (inputVal === USER_PASSWORD) {
         isAdmin = false;
         unlockChat();
       } else if (inputVal === ADMIN_PASSWORD) {
+        // 890 → スーパー管理者（名前固定なし、自分削除OK）
         isAdmin = true;
         isSuperAdmin = true;
-        fixedName = "坂口";
         nameColor = "red";
         unlockChat();
       } else if (SPECIAL_KEYS[inputVal]) {
@@ -153,7 +141,7 @@
         fixedName = info.name;
         nameColor = info.color;
 
-        if (fixedName === "山中") {
+        if (fixedName === "山中" || fixedName === "坂口") {
           isAdmin = true;
         }
         unlockChat();
@@ -193,7 +181,12 @@
       }
       if (!text) return;
 
-      const msgObj = { name, text, timestamp: getJSTDateTime(), color: nameColor, id: browserID };
+      const msgObj = {
+        name,
+        text,
+        timestamp: getJSTDateTime(),
+        color: nameColor
+      };
       socket.emit("chat message", msgObj);
       input.value = "";
     });
@@ -225,14 +218,21 @@
         ${m.color === "red" ? "color:red;" : ""}
       `;
 
-      const content = `[${m.timestamp}] <span style="${nameStyle}">${m.name}(ID:${m.id || "???"})</span>: ${m.text}`;
+      const content = `[${m.timestamp}] <span style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
-      // 削除ボタン制御
+      // ====== 🔐削除ボタン制御 ======
       let deleteButton = "";
       if (isAdmin) {
-        if (isSuperAdmin && m.name !== "坂口") {
+        // 890（super admin）→ 全削除可（自分含む）
+        if (isSuperAdmin) {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        } else if (fixedName === "山中") {
+        }
+        // 坂口(5555) → 全削除可だが 890コメントは削除不可
+        else if (fixedName === "坂口" && m.name !== "坂口" && m.color !== "red") {
+          deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
+        }
+        // 山中(1102) → 全削除可能
+        else if (fixedName === "山中") {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
         }
       }
@@ -250,4 +250,3 @@
   </script>
 </body>
 </html>
-
