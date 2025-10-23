@@ -74,7 +74,7 @@
     background-color: #d22;
   }
 
-  /* ✅ 名前部分（ラベル風） */
+  /* ✅ 名前部分（背景ラベル風） */
   .name-label {
     display: inline-block;
     padding: 2px 6px;
@@ -91,7 +91,7 @@
     🔒 このチャットルームは「あいことば」で保護されています。
     <br /><br />
     <input id="passInput" type="password" placeholder="あいことばを入力..." />
-    <button onclick="checkPassword()">入室</button>
+    <button id="enterBtn" onclick="checkPassword()">入室</button>
     <p id="error" style="color: red"></p>
   </div>
 
@@ -110,13 +110,13 @@
     const USER_PASSWORD = "200";
     const ADMIN_PASSWORD = "890";
 
-    // 特殊あいことば設定
+    // 特殊あいことば設定（背景色含む）
     const SPECIAL_KEYS = {
-      "4545": { name: "池原", color: "#ffe4e1" },
-      "0823": { name: "小島", color: "#e6e6fa" },
-      "1021": { name: "森ユート", color: "#ccffcc" },
-      "1102": { name: "山中", color: "#ccffff" },
-      "5555": { name: "坂口", color: "#ffffcc" }
+      "4545": { name: "池原", color: "#ffe4e1" },  // 薄ピンク
+      "0823": { name: "小島", color: "#e6e6fa" },  // 薄紫
+      "1021": { name: "森ユート", color: "#ccffcc" }, // 薄緑
+      "1102": { name: "山中", color: "#ccffff" },  // 薄水色
+      "5555": { name: "坂口", color: "#ffffcc" }   // 薄黄色
     };
 
     let isAdmin = false;
@@ -129,6 +129,14 @@
     const input = document.getElementById("input");
     const nameInput = document.getElementById("name");
     const messages = document.getElementById("messages");
+
+    // ====== Enterで入室可能 ======
+    document.getElementById("passInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        checkPassword();
+      }
+    });
 
     // ====== あいことば確認 ======
     function checkPassword() {
@@ -221,24 +229,19 @@
 
       const nameStyle = `
         background-color: ${m.color || "transparent"};
-        ${m.color === "red" ? "color:red;" : "color:black;"}
+        color: ${m.color === "red" ? "red" : "black"};
       `;
 
       const content = `[${m.timestamp}] <span class="name-label" style="${nameStyle}">${m.name}</span>: ${m.text}`;
 
-      // ====== 🔐削除ボタン制御 ======
+      // ====== 削除ボタン制御 ======
       let deleteButton = "";
       if (isAdmin) {
-        // 890（super admin）→ 全削除可（自分含む）
         if (isSuperAdmin) {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        }
-        // 坂口(5555) → 全削除可だが 890コメントは削除不可
-        else if (fixedName === "坂口" && m.name !== "坂口" && m.color !== "red") {
+        } else if (fixedName === "坂口" && m.name !== "坂口" && m.color !== "red") {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
-        }
-        // 山中(1102) → 全削除可能
-        else if (fixedName === "山中") {
+        } else if (fixedName === "山中") {
           deleteButton = `<button class="delete-btn" onclick="deleteMessage('${li.id}')">❌</button>`;
         }
       }
